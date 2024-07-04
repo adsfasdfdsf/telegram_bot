@@ -10,6 +10,7 @@ class Connector:
         self.database = DataBase(dbname=DBNAME, user=USER, host=HOST, password=PASSWORD, port=PORT)
         self.api = API()
 
+    # TODO-REVIEW база данных всегда держит соединение - это очень плохо. база не должно блокироваться на такой срок.
     async def Init(self):
         await self.database.async_connect()
         await self.api.Init()

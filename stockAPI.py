@@ -1,9 +1,11 @@
 import httpx
+# TODO-REVIEW не используемые импорты удалять
 from httpx import Response, Request, AsyncClient
 import asyncio
 import json
 
 
+# TODO-REVIEW проверка статусов каждого запроса, также проверка что self._client живой (может умереть внезапно)
 class API:
     def __init__(self):
         self._client = None
@@ -48,6 +50,7 @@ class API:
         r = json.loads(await response.aread())
         print(r)
 
+    # TODO-REVIEW type hints до конца используй, и на from_date, till_date и на выходной тип данных через ->
     async def get_bond_history(self, secid: str, from_date, till_date):
         params = {"iss.meta": "off", "history.columns": "TRADEDATE,WAPRICE,CURRENCYID",
                   "from": from_date, "till": till_date}

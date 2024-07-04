@@ -1,7 +1,7 @@
 import pandas as pd
 import mplfinance as mpf
 
-
+# TODO-REVIEW type hints добавь, а то не понятно что за data, что в ней лежит...
 async def draw_price_graph(name, data, secid):
     opened = []
     close = []

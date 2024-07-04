@@ -6,22 +6,33 @@ from passwords import TOKEN
 from connector import Connector
 import os
 from keyboards import menu_keyboard, choice_keyboard
+# TODO-REVIEW для имортов использовать тулзу isort, она их отсортирует и выровняет в правильном формате
 
+# TODO-REVIEW для токена, паролей, адресов и прочего использовать .env файл
 token = TOKEN
+
+# TODO-REVIEW глобальные переменные плохо, предлагаю сделать отдельный пакет/сервис для работы с бд
+# если пакет, то сделать метод get_database_instance которая будет синглтон бд возвращать
+# если сервис, то просто вывести REST API на каждый из методов, которые нужны
 con = Connector()
 
+# TODO-REVIEW для состояний использовать библиотеку aenum и вынести в отдельный файл states
 ADD_SHARE, ADD_BOND, DELETE, ANY, CHOICE, SECRITY_CHOICE = range(6)
 
 con_established = False
 
-
+# TODO-REVIEW для каждого handler сделать декоратор, который через logging будет логировать %function%user% для краткой аналитики
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # TODO-REVIEW вместо print использовать logging, там есть уровни лога, в том числе level.DEBUG, для таких строчек
     print(update.message.message_id)
     markup_key = ReplyKeyboardMarkup(menu_keyboard, one_time_keyboard=False)
     await context.bot.send_message(chat_id=update.effective_chat.id,
+                                   # TODO-REVIEW все тексты в отдельный файл
                                    text="I'm a screener bot, I can show some statistics on "
                                         "different stocks and shares! You can choose any option and get a description",
                                    reply_markup=markup_key)
+    
+    # TODO-REVIEW ну если сделал глобальный con, то глобально и Init мог вызвать..
     if not con_established:
         await con.Init()
     return ANY
@@ -34,6 +45,7 @@ async def any_state(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Chose on a reply keyboard what do you want to add, bond or share. If you missed clicked tap /end",
             reply_markup=ReplyKeyboardMarkup(choice_keyboard, one_time_keyboard=False))
         return SECRITY_CHOICE
+    # TODO-REVIEW elif вместо if
     if "remove" in update.message.text.lower():
         await update.effective_user.send_message(
             "Write a name of a stock you want to remove.",
@@ -52,6 +64,7 @@ async def any_state(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def add_bond(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # TODO-REVIEW нужно проверять наличие используемых ключей secid, isin и тп, внутри метода find_bond, если АПИ изменят - бот крашнется
     data = await con.find_bond(update.message.text.strip())
     if len(data) == 0:
         await update.effective_user.send_message("We didn't find any securities on this name/ticker/isin."
@@ -77,6 +90,7 @@ async def add_bond(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                                  " you can stop choosing by tapping /end")
         count = len(data)
 
+        # TODO-REVIEW не совсем понял, что тут происходит, но подозреваю что есть проблема использования context.chat_data["choice_message_ids"]
         context.chat_data["choice_message_ids"] = []
         choices = {}
         for i in range(1, count + 1):
@@ -93,6 +107,7 @@ async def add_bond(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return CHOICE
 
 
+# TODO-REVIEW что то много дублирования кода, методы add_bond и add_share больно похожи, можно избавиться от дублирования думаю
 async def add_share(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = await con.find_share(update.message.text.strip())
     if len(data) == 0:
@@ -140,6 +155,7 @@ async def choose_paper(update: Update, context: ContextTypes.DEFAULT_TYPE):
     choice = context.chat_data["choice_messages"]
     if text.isdigit():
         if (int(text) <= len(choice)) and (int(text) > 0):
+            # TODO-REVIEW многовато обращений по индексу, не думаю что проверка сверху покрывает все варианты краша
             data = choice[text].split("%)")
             await con.add_security_to_db(*data)
             await con.add_security(update.effective_user.id, data[0])
@@ -228,6 +244,7 @@ async def show_user_securities(update: Update):
         answer = await con.draw_price_graphic(i)
         if answer == "ok":
             await update.effective_user.send_photo(f"{i}.png")
+            # TODO-REVIEW перед os.remove нужно os.exists
             os.remove(f"{i}.png")
         await update.effective_user.send_message(i)
         await update.effective_user.send_message(answer)
@@ -253,6 +270,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     app = Application.builder().token(token).concurrent_updates(True).build()
+    # TODO-REVIEW аргументы per_user, per_chat и тп
     conv_handler = ConversationHandler(entry_points=[CommandHandler("start", start_command)],
                                        states={
                                            ANY: [MessageHandler(filters.TEXT & (~ filters.COMMAND) & (
